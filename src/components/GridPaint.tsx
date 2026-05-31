@@ -722,9 +722,8 @@ export default function GridPaint() {
 
   const handleReset = useCallback(() => {
     pushUndo(activeCellsRef.current);
-    setActiveCells(new Set()); setPan({ x: 0, y: 0 }); setZoom(1);
-    setGridSize(GRID_SIZE_DEFAULT); setBrushColor("black");
-    setPattern("rounded"); setSymmetry("none"); setShowPatternPicker(false); setShowTilePreview(false);
+    setActiveCells(new Set());
+    setBrushColor("black");
   }, [pushUndo]);
 
   const handleDownloadSVG = useCallback(() => {

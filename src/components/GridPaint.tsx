@@ -213,7 +213,7 @@ function getBoundsOfCells(activeCells: Set<string>, gridSize: number) {
 
 // --- Styling constants ---
 
-const controlToolbar = "rounded-full p-1 items-center flex gap-0.5 backdrop-blur-[10px]";
+const controlToolbar = "rounded-full p-1 items-center flex gap-0.5 backdrop-blur-[10px] hover:z-[100]";
 
 const controlToolbarStyle: React.CSSProperties = {
   background: "rgba(0,0,0,0.56)",
@@ -228,6 +228,28 @@ const controlToolbarStyle: React.CSSProperties = {
 };
 
 const controlBtn = "size-8 hover:bg-white/10 flex items-center text-white duration-200 active:scale-95 justify-center cursor-pointer rounded-full";
+
+function Tooltip({ label, shortcut, children, side = "bottom", align = "center" }: {
+  label: string;
+  shortcut?: string;
+  children: React.ReactNode;
+  side?: "top" | "bottom";
+  align?: "start" | "center" | "end";
+}) {
+  const sideClass = side === "bottom" ? "top-full mt-2" : "bottom-full mb-2";
+  const alignClass = align === "start" ? "left-0" : align === "end" ? "right-0" : "left-1/2 -translate-x-1/2";
+  return (
+    <div className="relative group/tip hover:z-[200]">
+      {children}
+      <div className={`pointer-events-none absolute ${alignClass} ${sideClass} opacity-0 group-hover/tip:opacity-100 transition-opacity duration-150 whitespace-nowrap z-[200]`}>
+        <div className="bg-black/80 backdrop-blur-sm text-white text-[10px] rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 shadow-lg">
+          <span>{label}</span>
+          {shortcut && <kbd className="bg-white/15 rounded px-1.5 py-0.5 text-[9px] font-mono">{shortcut}</kbd>}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function PatternIcon({ pattern, size }: { pattern: PatternType; size: number }) {
   const s = size, h = s / 2, q = s / 4;
@@ -918,17 +940,17 @@ export default function GridPaint() {
       {/* --- UI Controls --- */}
       {/* Top left: undo/redo */}
       <div style={controlToolbarStyle} className={`fixed top-3 left-3 flex-row ${controlToolbar}`}>
-        <button onClick={undo} className={controlBtn} style={{ opacity: undoCount > 0 ? 0.7 : 0.3 }} title="Undo (Cmd+Z)">
+        <Tooltip label="Undo" shortcut="⌘Z" side="bottom" align="start"><button onClick={undo} className={controlBtn} style={{ opacity: undoCount > 0 ? 0.7 : 0.3 }}>
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 18 18" aria-hidden><g fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" stroke="currentColor"><path d="m16.25,11.2499c-.9467-2.9025-3.625-4.9999-6.75-4.9999-3.0059,0-5.4544,1.9155-6.5077,4.6187" /><polyline points="2.25 6.75 2.25 11.25 6.75 11.25" /></g></svg>
-        </button>
-        <button onClick={redo} className={controlBtn} style={{ opacity: redoCount > 0 ? 0.7 : 0.3 }} title="Redo (Cmd+Shift+Z)">
+        </button></Tooltip>
+        <Tooltip label="Redo" shortcut="⌘⇧Z" side="bottom"><button onClick={redo} className={controlBtn} style={{ opacity: redoCount > 0 ? 0.7 : 0.3 }} >
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 18 18" aria-hidden><g fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" stroke="currentColor"><path d="m1.75,11.2499c.9467-2.9025,3.625-4.9999,6.75-4.9999,3.0059,0,5.4544,1.9155,6.5077,4.6187" /><polyline points="15.75 6.75 15.75 11.25 11.25 11.25" /></g></svg>
-        </button>
+        </button></Tooltip>
       </div>
 
       {/* Top right: reset, download, copy SVG, share */}
       <div style={controlToolbarStyle} className={`fixed top-3 right-3 flex-row ${controlToolbar}`}>
-        <button onClick={generateRandom} className={controlBtn} style={{ opacity: 0.85 }} title="Random (R)">
+        <Tooltip label="Random" shortcut="R" side="bottom"><button onClick={generateRandom} className={controlBtn} style={{ opacity: 0.85 }}>
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 18 18" aria-hidden>
             <g fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" stroke="currentColor">
               <rect x="2.75" y="2.75" width="12.5" height="12.5" rx="2" ry="2" />
@@ -939,14 +961,14 @@ export default function GridPaint() {
               <circle cx="6" cy="12" r="1" fill="currentColor" data-stroke="none" stroke="none" />
             </g>
           </svg>
-        </button>
-        <button onClick={handleReset} className={controlBtn} style={{ opacity: 0.85 }} title="Reset">
+        </button></Tooltip>
+        <Tooltip label="Clear" side="bottom"><button onClick={handleReset} className={controlBtn} style={{ opacity: 0.85 }}>
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 18 18" aria-hidden><g fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" stroke="currentColor"><path d="M6.096,7.032c.488,.791,1.111,1.636,1.904,2.468,1.074,1.125,2.194,1.948,3.204,2.546" /><line x1="16.25" y1="1.5" x2="10.376" y2="7.374" /><path d="M10.376,7.374c3.158,2.77-.077,6.653-2.123,8.288-.51,.408-1.186,.554-1.814,.375-2.745-.781-4.391-3.076-4.689-6.037,1.375-.188,2.192-.997,3.447-2.268,1.56-1.581,3.803-1.566,5.179-.358Z" /></g></svg>
-        </button>
-        <button onClick={handleDownloadSVG} className={controlBtn} style={{ opacity: 0.85 }} title="Download SVG">
+        </button></Tooltip>
+        <Tooltip label="Download SVG" side="bottom"><button onClick={handleDownloadSVG} className={controlBtn} style={{ opacity: 0.85 }}>
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 18 18" aria-hidden><g fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" stroke="currentColor"><path d="M15.25,11.75v1.5c0,1.105-.895,2-2,2H4.75c-1.105,0-2-.895-2-2v-1.5" /><polyline points="5.5 6.75 9 10.25 12.5 6.75" /><line x1="9" y1="10.25" x2="9" y2="2.75" /></g></svg>
-        </button>
-        <button onClick={copySVGToClipboard} className={controlBtn} style={{ opacity: 0.85 }} title="Copy SVG (Cmd+C)">
+        </button></Tooltip>
+        <Tooltip label="Copy SVG" shortcut="⌘C" side="bottom"><button onClick={copySVGToClipboard} className={controlBtn} style={{ opacity: 0.85 }}>
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 18 18" aria-hidden>
             <g fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" stroke="currentColor">
               <path d="m10.75,6.25v-2c0-.8284-.6716-1.5-1.5-1.5h-1" />
@@ -957,8 +979,8 @@ export default function GridPaint() {
               <line x1="10.25" y1="12.75" x2="13.25" y2="12.75" />
             </g>
           </svg>
-        </button>
-        <button onClick={importImage} className={controlBtn} style={{ opacity: 0.85 }} title="Import image">
+        </button></Tooltip>
+        <Tooltip label="Import image" side="bottom"><button onClick={importImage} className={controlBtn} style={{ opacity: 0.85 }}>
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 18 18" aria-hidden>
             <g fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" stroke="currentColor">
               <path d="M3.762,14.989l6.074-6.075c.781-.781,2.047-.781,2.828,0l2.586,2.586" />
@@ -966,36 +988,36 @@ export default function GridPaint() {
               <circle cx="6.25" cy="7.25" r="1.25" fill="currentColor" data-stroke="none" stroke="none" />
             </g>
           </svg>
-        </button>
-        <button onClick={shareURL} className={controlBtn} style={{ opacity: 0.85 }} title="Share URL (copies link)">
+        </button></Tooltip>
+        <Tooltip label="Share link" side="bottom" align="end"><button onClick={shareURL} className={controlBtn} style={{ opacity: 0.85 }}>
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 18 18" aria-hidden>
             <g fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" stroke="currentColor">
               <path d="M8.36909 6.8934C8.06649 7.0539 7.78239 7.2617 7.52799 7.517L7.51799 7.527C6.13699 8.908 6.13699 11.146 7.51799 12.527L9.69299 14.702C11.074 16.083 13.312 16.083 14.693 14.702L14.703 14.692C16.084 13.311 16.084 11.073 14.703 9.692L13.9406 8.9296" />
               <path d="M9.63289 11.1066C9.93549 10.9461 10.2196 10.7383 10.474 10.483L10.484 10.473C11.865 9.09199 11.865 6.85399 10.484 5.47299L8.30899 3.29799C6.92799 1.91699 4.68999 1.91699 3.30899 3.29799L3.29899 3.30799C1.91799 4.68899 1.91799 6.92699 3.29899 8.30799L4.06139 9.07039" />
             </g>
           </svg>
-        </button>
+        </button></Tooltip>
       </div>
 
       <div style={controlToolbarStyle} className={`fixed top-15 right-3 flex-row ${controlToolbar}`}>
-        <Link href="/collection" target="_blank" className={controlBtn} style={{ opacity: 0.85 }} title="Collection">
+        <Tooltip label="Collection" side="bottom"><Link href="/collection" target="_blank" className={controlBtn} style={{ opacity: 0.85 }}>
           <svg xmlns="http://www.w3.org/2000/svg" className="size-4" width="18" height="18" viewBox="0 0 18 18"><g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" stroke="currentColor"><rect x="2.75" y="7.75" width="12.5" height="7.5" rx="1" ry="1"></rect><line x1="5.75" y1="1.75" x2="12.25" y2="1.75"></line><line x1="4.25" y1="4.75" x2="13.75" y2="4.75"></line></g></svg>
-        </Link>
-        <button onClick={() => setShowShortcuts((p) => !p)} className={controlBtn} style={{ opacity: 0.85 }} title="Shortcuts (?)">
+        </Link></Tooltip>
+        <Tooltip label="Shortcuts" shortcut="?" side="bottom" align="end"><button onClick={() => setShowShortcuts((p) => !p)} className={controlBtn} style={{ opacity: 0.85 }}>
           <svg className="size-4" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18"><g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" stroke="currentColor"><rect x="6.75" y="6.75" width="4.5" height="4.5"></rect><path d="M4.75,2.75h0c1.104,0,2,.896,2,2v2h-2c-1.104,0-2-.896-2-2h0c0-1.104,.896-2,2-2Z"></path><path d="M13.25,2.75h0c1.104,0,2,.896,2,2v2h-2c-1.104,0-2-.896-2-2h0c0-1.104,.896-2,2-2Z" transform="translate(18 -8.5) rotate(90)"></path><path d="M13.25,11.25h0c1.104,0,2,.896,2,2v2h-2c-1.104,0-2-.896-2-2h0c0-1.104,.896-2,2-2Z" transform="translate(26.5 26.5) rotate(-180)"></path><path d="M4.75,11.25h0c1.104,0,2,.896,2,2v2h-2c-1.104,0-2-.896-2-2h0c0-1.104,.896-2,2-2Z" transform="translate(-8.5 18) rotate(-90)"></path></g></svg>
-        </button>
+        </button></Tooltip>
       </div>
 
 
       {/* Bottom right: zoom, fit, symmetry, invert, tile, color */}
       <div style={controlToolbarStyle} className={`fixed bottom-3 right-3 flex-row ${controlToolbar}`}>
-        <button onClick={() => { triggerAnimatedTransform(); setZoom((prev) => Math.min(ZOOM_MAX, prev * 1.2)); }} className={controlBtn} style={{ opacity: zoom >= ZOOM_MAX ? 0.3 : 0.7 }} title="Zoom in (Cmd+)">
+        <Tooltip label="Zoom in" shortcut="⌘+" side="top"><button onClick={() => { triggerAnimatedTransform(); setZoom((prev) => Math.min(ZOOM_MAX, prev * 1.2)); }} className={controlBtn} style={{ opacity: zoom >= ZOOM_MAX ? 0.3 : 0.7 }}>
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 18 18" aria-hidden><g fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" stroke="currentColor"><line x1="9" y1="3.25" x2="9" y2="14.75" /><line x1="3.25" y1="9" x2="14.75" y2="9" /></g></svg>
-        </button>
-        <button onClick={() => { triggerAnimatedTransform(); setZoom((prev) => Math.max(ZOOM_MIN, prev / 1.2)); }} className={controlBtn} style={{ opacity: zoom <= ZOOM_MIN ? 0.3 : 0.7 }} title="Zoom out (Cmd-)">
+        </button></Tooltip>
+        <Tooltip label="Zoom out" shortcut="⌘−" side="top"><button onClick={() => { triggerAnimatedTransform(); setZoom((prev) => Math.max(ZOOM_MIN, prev / 1.2)); }} className={controlBtn} style={{ opacity: zoom <= ZOOM_MIN ? 0.3 : 0.7 }}>
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 18 18" aria-hidden><g fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" stroke="currentColor"><line x1="3.25" y1="9" x2="14.75" y2="9" /></g></svg>
-        </button>
-        <button onClick={fitToContent} className={controlBtn} style={{ opacity: 0.85 }} title="Fit to content (0)">
+        </button></Tooltip>
+        <Tooltip label="Fit to content" shortcut="0" side="top"><button onClick={fitToContent} className={controlBtn} style={{ opacity: 0.85 }}>
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 18 18" aria-hidden>
             <g fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" stroke="currentColor">
               <path d="M1.75,6.75v-2c0-1.105,.895-2,2-2h2" />
@@ -1004,11 +1026,11 @@ export default function GridPaint() {
               <path d="M5.75,15.25H3.75c-1.105,0-2-.895-2-2v-2" />
             </g>
           </svg>
-        </button>
-        <button onClick={cycleSymmetry} className={controlBtn} style={{ opacity: symmetry !== "none" ? 1 : 0.5 }} title={`Symmetry: ${symmetry} (H/V/B)`}>
+        </button></Tooltip>
+        <Tooltip label="Symmetry" shortcut="H/V/B" side="top"><button onClick={cycleSymmetry} className={controlBtn} style={{ opacity: symmetry !== "none" ? 1 : 0.5 }} >
           <SymmetryIcon mode={symmetry} />
-        </button>
-        <button onClick={invertCells} className={controlBtn} style={{ opacity: 0.7 }} title="Invert (I)">
+        </button></Tooltip>
+        <Tooltip label="Invert" shortcut="I" side="top"><button onClick={invertCells} className={controlBtn} style={{ opacity: 0.7 }}>
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 18 18" aria-hidden>
             <g fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" stroke="currentColor">
               <path d="M9,6v6c1.657,0,3-1.343,3-3s-1.343-3-3-3Z" fill="currentColor" data-stroke="none" stroke="none" />
@@ -1021,8 +1043,8 @@ export default function GridPaint() {
               <circle cx="9" cy="9" r="7.25" />
             </g>
           </svg>
-        </button>
-        <button onClick={() => setShowTilePreview((p) => !p)} className={controlBtn} style={{ opacity: showTilePreview ? 1 : 0.5 }} title="Tile preview (T)">
+        </button></Tooltip>
+        <Tooltip label="Tile preview" shortcut="T" side="top"><button onClick={() => setShowTilePreview((p) => !p)} className={controlBtn} style={{ opacity: showTilePreview ? 1 : 0.5 }}>
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 18 18" aria-hidden>
             <g fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" stroke="currentColor">
               <rect x="2.75" y="2.75" width="4.5" height="4.5" rx="1" ry="1" />
@@ -1031,31 +1053,34 @@ export default function GridPaint() {
               <circle cx="5" cy="13" r="2.5" />
             </g>
           </svg>
-        </button>
-        <button onClick={toggleColor} className="size-8 opacity-60 duration-200 active:scale-95 rounded-full cursor-pointer transition-all" style={{ backgroundColor: brushColor === "black" ? "#000" : "#fff", borderColor: brushColor === "black" ? "#000" : "#ccc" }} title={`Brush: ${brushColor} (X)`} />
+        </button></Tooltip>
+        <Tooltip label="Brush" shortcut="X" side="top" align="end"><div onClick={toggleColor} className="size-8 opacity-60 duration-200 active:scale-95 rounded-full cursor-pointer transition-all" style={{ backgroundColor: brushColor === "black" ? "#000" : "#fff", borderColor: brushColor === "black" ? "#000" : "#ccc" }} /></Tooltip>
       </div>
 
       {/* Bottom left: pattern picker */}
       <div style={controlToolbarStyle} className={`fixed bottom-3 left-3 flex-col ${controlToolbar}`}>
-        <button onClick={() => setShowPatternPicker((p) => !p)} className={`${controlBtn} ${showPatternPicker ? "bg-white/15" : ""}`} style={{ opacity: 0.85 }} title="Pattern (1-5)">
+        <Tooltip label="Pattern" shortcut="1-5" side="top" align="start"><button onClick={() => setShowPatternPicker((p) => !p)} className={`${controlBtn} ${showPatternPicker ? "bg-white/15" : ""}`} style={{ opacity: 0.85 }}>
           <PatternIcon pattern={pattern} size={18} />
-        </button>
+        </button></Tooltip>
       </div>
 
       {showPatternPicker && (
-        <div className={`fixed bottom-16 left-3 rounded-[16px] p-1 flex flex-col gap-0.5 backdrop-blur-[10px]`} style={controlToolbarStyle}>
-          {PATTERNS.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => { setPattern(p.id); setShowPatternPicker(false); }}
-              className="flex items-center gap-2.5 px-2.5 py-2 rounded-[12px] cursor-pointer hover:bg-white/10 transition-colors text-white"
-              style={{ background: pattern === p.id ? "rgba(255,255,255,0.12)" : "transparent", fontWeight: pattern === p.id ? 600 : 400 }}
-            >
-              <PatternIcon pattern={p.id} size={16} />
-              <span className="text-xs">{p.label}</span>
-            </button>
-          ))}
-        </div>
+        <>
+          <div className="fixed inset-0 z-[51]" onClick={() => setShowPatternPicker(false)} />
+          <div className={`fixed bottom-16 left-3 rounded-[16px] p-1 flex flex-col gap-0.5 backdrop-blur-[10px] z-[52]`} style={controlToolbarStyle}>
+            {PATTERNS.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => { setPattern(p.id); setShowPatternPicker(false); }}
+                className="flex items-center gap-2.5 px-2.5 py-2 rounded-[12px] cursor-pointer hover:bg-white/10 transition-colors text-white"
+                style={{ background: pattern === p.id ? "rgba(255,255,255,0.12)" : "transparent", fontWeight: pattern === p.id ? 600 : 400 }}
+              >
+                <PatternIcon pattern={p.id} size={16} />
+                <span className="text-xs">{p.label}</span>
+              </button>
+            ))}
+          </div>
+        </>
       )}
 
       {/* Hidden file input for image import */}

@@ -265,7 +265,7 @@ export default function GridPaint() {
   const [symmetry, setSymmetry] = useState<SymmetryMode>("none");
   const [showPatternPicker, setShowPatternPicker] = useState(false);
   const [showTilePreview, setShowTilePreview] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [animateTransform, setAnimateTransform] = useState(false);
   const animateTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -321,18 +321,99 @@ export default function GridPaint() {
   patternRef.current = pattern;
   symmetryRef.current = symmetry;
 
-  // --- Load state from URL on mount ---
+  // --- Persist to localStorage on changes ---
+  const isInitialized = useRef(false);
   useEffect(() => {
+    if (!isInitialized.current) return;
+    try {
+      const data = {
+        c: Array.from(activeCells).map((k) => k.replace(",", ".")),
+        p: pattern,
+        s: symmetry,
+      };
+      localStorage.setItem("gridpaint-state", JSON.stringify(data));
+    } catch { /* ignore */ }
+  }, [activeCells, pattern, symmetry]);
+
+  // --- Load state on mount: URL hash > localStorage > first-visit random ---
+  // Then auto fit-to-content so it's centered.
+  const needsFitOnMount = useRef(false);
+  useEffect(() => {
+    // 1. Try URL hash
     const hash = window.location.hash.slice(1);
     if (hash) {
       const state = decodeState(hash);
-      if (state) {
+      if (state && state.cells.size > 0) {
         setActiveCells(state.cells);
         setPattern(state.pattern);
         setSymmetry(state.symmetry);
+        isInitialized.current = true;
+        needsFitOnMount.current = true;
+        return;
       }
     }
-  }, []);
+    // 2. Try localStorage
+    try {
+      const saved = localStorage.getItem("gridpaint-state");
+      if (saved) {
+        const data = JSON.parse(saved);
+        const cells = new Set<string>((data.c || []).map((k: string) => k.replace(".", ",")));
+        if (cells.size > 0) {
+          setActiveCells(cells);
+          if (data.p) setPattern(data.p);
+          if (data.s) setSymmetry(data.s);
+          isInitialized.current = true;
+          needsFitOnMount.current = true;
+          return;
+        }
+      }
+    } catch { /* ignore */ }
+    // 3. First visit: generate random blob
+    setPattern("blob");
+    const size = 3 + Math.floor(Math.random() * 4);
+    const density = 0.3 + Math.random() * 0.4;
+    const symType = (["horizontal", "vertical", "both"] as const)[Math.floor(Math.random() * 3)];
+    const half = Math.floor(size / 2);
+    const next = new Set<string>();
+    const genW = symType === "horizontal" || symType === "both" ? half + 1 : size;
+    const genH = symType === "vertical" || symType === "both" ? half + 1 : size;
+    for (let x = 0; x < genW; x++) {
+      for (let y = 0; y < genH; y++) {
+        if (Math.random() < density) {
+          const cx = x - half, cy = y - half;
+          next.add(cellKey(cx, cy));
+          if (symType === "horizontal" || symType === "both") next.add(cellKey(-cx, cy));
+          if (symType === "vertical" || symType === "both") next.add(cellKey(cx, -cy));
+          if (symType === "both") next.add(cellKey(-cx, -cy));
+        }
+      }
+    }
+    setActiveCells(next);
+    isInitialized.current = true;
+    needsFitOnMount.current = true;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // --- Auto fit-to-content after mount load ---
+  useEffect(() => {
+    if (needsFitOnMount.current && activeCells.size > 0 && dimensions.width > 0) {
+      needsFitOnMount.current = false;
+      // Schedule after paint so refs are up-to-date
+      requestAnimationFrame(() => {
+        const cells = activeCellsRef.current;
+        if (cells.size === 0) return;
+        const bounds = getBoundsOfCells(cells, gridSizeRef.current);
+        if (!bounds) return;
+        const padding = gridSizeRef.current * 2;
+        const bw = bounds.width + padding * 2, bh = bounds.height + padding * 2;
+        const scaleX = window.innerWidth / bw, scaleY = window.innerHeight / bh;
+        const newZoom = Math.min(scaleX, scaleY, ZOOM_MAX);
+        const cx = bounds.x + bounds.width / 2, cy = bounds.y + bounds.height / 2;
+        triggerAnimatedTransform();
+        setZoom(newZoom);
+        setPan({ x: window.innerWidth / 2 - cx * newZoom, y: window.innerHeight / 2 - cy * newZoom });
+      });
+    }
+  }, [activeCells, dimensions]);
 
   // --- Resize ---
   useEffect(() => {
@@ -342,21 +423,6 @@ export default function GridPaint() {
     return () => window.removeEventListener("resize", updateSize);
   }, []);
 
-  // --- Fullscreen (sync toolbar highlight) ---
-  useEffect(() => {
-    const sync = () => {
-      const el = containerRef.current;
-      const doc = document as Document & { webkitFullscreenElement?: Element | null };
-      const fs = document.fullscreenElement ?? doc.webkitFullscreenElement;
-      setIsFullscreen(Boolean(el && fs === el));
-    };
-    document.addEventListener("fullscreenchange", sync);
-    document.addEventListener("webkitfullscreenchange", sync);
-    return () => {
-      document.removeEventListener("fullscreenchange", sync);
-      document.removeEventListener("webkitfullscreenchange", sync);
-    };
-  }, []);
 
   // --- Gestures / wheel ---
   useEffect(() => {
@@ -423,6 +489,40 @@ export default function GridPaint() {
     setActiveCells(next);
   }, [pushUndo]);
 
+  // --- Random generate ---
+  const generateRandom = useCallback(() => {
+    pushUndo(activeCellsRef.current);
+    const size = 3 + Math.floor(Math.random() * 4); // 3 to 6
+    const density = 0.3 + Math.random() * 0.4; // 30-70%
+    const useSymmetry = Math.random() > 0.3; // 70% chance of symmetry
+    const symType = useSymmetry
+      ? (["horizontal", "vertical", "both"] as const)[Math.floor(Math.random() * 3)]
+      : null;
+
+    const half = Math.floor(size / 2);
+    const next = new Set<string>();
+
+    // Generate one quadrant/half then mirror
+    const genW = symType === "horizontal" || symType === "both" ? half + 1 : size;
+    const genH = symType === "vertical" || symType === "both" ? half + 1 : size;
+
+    for (let x = 0; x < genW; x++) {
+      for (let y = 0; y < genH; y++) {
+        if (Math.random() < density) {
+          const cx = x - half, cy = y - half;
+          next.add(cellKey(cx, cy));
+          if (symType === "horizontal" || symType === "both") next.add(cellKey(-cx, cy));
+          if (symType === "vertical" || symType === "both") next.add(cellKey(cx, -cy));
+          if (symType === "both") next.add(cellKey(-cx, -cy));
+        }
+      }
+    }
+
+    setActiveCells(next);
+    setPan({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+    setZoom(1);
+  }, [pushUndo]);
+
   // --- Fit to content ---
   const fitToContent = useCallback(() => {
     const cells = activeCellsRef.current;
@@ -464,19 +564,6 @@ export default function GridPaint() {
     navigator.clipboard.writeText(svgContent);
   }, []);
 
-  const toggleFullscreen = useCallback(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const doc = document as Document & { webkitFullscreenElement?: Element | null; webkitExitFullscreen?: () => void };
-    const fsEl = document.fullscreenElement ?? doc.webkitFullscreenElement;
-    if (fsEl === el) {
-      if (document.exitFullscreen) void document.exitFullscreen();
-      else doc.webkitExitFullscreen?.();
-      return;
-    }
-    if (el.requestFullscreen) void el.requestFullscreen();
-    else (el as HTMLElement & { webkitRequestFullscreen?: () => void }).webkitRequestFullscreen?.();
-  }, []);
 
   // --- Keyboard shortcuts ---
   useEffect(() => {
@@ -504,8 +591,9 @@ export default function GridPaint() {
           case "v": case "V": setSymmetry((s) => s === "vertical" ? "none" : "vertical"); break;
           case "b": case "B": setSymmetry((s) => s === "both" ? "none" : "both"); break;
           case "0": fitToContent(); break;
-          case "f": case "F": toggleFullscreen(); break;
+
           case "t": case "T": setShowTilePreview((p) => !p); break;
+          case "r": case "R": generateRandom(); break;
           case "Delete": case "Backspace":
             pushUndo(activeCellsRef.current);
             setActiveCells(new Set());
@@ -515,7 +603,7 @@ export default function GridPaint() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [undo, redo, triggerAnimatedTransform, invertCells, fitToContent, copySVGToClipboard, toggleFullscreen, pushUndo]);
+  }, [undo, redo, triggerAnimatedTransform, invertCells, fitToContent, copySVGToClipboard, generateRandom, pushUndo]);
 
   // --- Touch handling ---
   const touchStateRef = useRef<{ lastCenter: { x: number; y: number } | null; lastDist: number | null }>({ lastCenter: null, lastDist: null });
@@ -760,6 +848,9 @@ export default function GridPaint() {
 
       {/* Top right: reset, download, copy SVG, share */}
       <div style={controlToolbarStyle} className={`fixed top-3 right-3 flex-row ${controlToolbar}`}>
+        <button onClick={generateRandom} className={controlBtn} style={{ opacity: 0.85 }} title="Random (R)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 18 18" aria-hidden><g fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" stroke="currentColor"><rect x="2.75" y="2.75" width="12.5" height="12.5" rx="2" /><circle cx="6.5" cy="6.5" r=".75" fill="currentColor" stroke="none" /><circle cx="9" cy="9" r=".75" fill="currentColor" stroke="none" /><circle cx="11.5" cy="11.5" r=".75" fill="currentColor" stroke="none" /><circle cx="6.5" cy="11.5" r=".75" fill="currentColor" stroke="none" /><circle cx="11.5" cy="6.5" r=".75" fill="currentColor" stroke="none" /></g></svg>
+        </button>
         <button onClick={handleReset} className={controlBtn} style={{ opacity: 0.85 }} title="Reset">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 18 18" aria-hidden><g fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" stroke="currentColor"><path d="M6.096,7.032c.488,.791,1.111,1.636,1.904,2.468,1.074,1.125,2.194,1.948,3.204,2.546" /><line x1="16.25" y1="1.5" x2="10.376" y2="7.374" /><path d="M10.376,7.374c3.158,2.77-.077,6.653-2.123,8.288-.51,.408-1.186,.554-1.814,.375-2.745-.781-4.391-3.076-4.689-6.037,1.375-.188,2.192-.997,3.447-2.268,1.56-1.581,3.803-1.566,5.179-.358Z" /></g></svg>
         </button>
@@ -788,7 +879,7 @@ export default function GridPaint() {
         </button>
       </div>
 
-      {/* Bottom right: zoom, fullscreen, symmetry, invert, tile, color */}
+      {/* Bottom right: zoom, fit, symmetry, invert, tile, color */}
       <div style={controlToolbarStyle} className={`fixed bottom-3 right-3 flex-row ${controlToolbar}`}>
         <button onClick={() => { triggerAnimatedTransform(); setZoom((prev) => Math.min(ZOOM_MAX, prev * 1.2)); }} className={controlBtn} style={{ opacity: zoom >= ZOOM_MAX ? 0.3 : 0.7 }} title="Zoom in (Cmd+)">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 18 18" aria-hidden><g fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" stroke="currentColor"><line x1="9" y1="3.25" x2="9" y2="14.75" /><line x1="3.25" y1="9" x2="14.75" y2="9" /></g></svg>
@@ -796,7 +887,7 @@ export default function GridPaint() {
         <button onClick={() => { triggerAnimatedTransform(); setZoom((prev) => Math.max(ZOOM_MIN, prev / 1.2)); }} className={controlBtn} style={{ opacity: zoom <= ZOOM_MIN ? 0.3 : 0.7 }} title="Zoom out (Cmd-)">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 18 18" aria-hidden><g fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" stroke="currentColor"><line x1="3.25" y1="9" x2="14.75" y2="9" /></g></svg>
         </button>
-        <button onClick={toggleFullscreen} className={`${controlBtn} ${isFullscreen ? "bg-white/15" : ""}`} style={{ opacity: 0.85 }} title="Fullscreen (F)">
+        <button onClick={fitToContent} className={controlBtn} style={{ opacity: 0.85 }} title="Fit to content (0)">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 18 18" aria-hidden>
             <g fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" stroke="currentColor">
               <path d="M1.75,6.75v-2c0-1.105,.895-2,2-2h2" />

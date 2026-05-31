@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useCallback, useEffect } from "react";
+import Link from "next/link";
 
 const GRID_SIZE_STEPS = 25;
 const GRID_SIZE_MIN = GRID_SIZE_STEPS * 2;
@@ -267,6 +268,7 @@ export default function GridPaint() {
   const [patternTransition, setPatternTransition] = useState(false);
   const [prevPaths, setPrevPaths] = useState("");
   const [showTilePreview, setShowTilePreview] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [animateTransform, setAnimateTransform] = useState(false);
@@ -370,27 +372,14 @@ export default function GridPaint() {
         }
       }
     } catch { /* ignore */ }
-    // 3. First visit: generate random blob
+    // 3. First visit: show the Pixelform logo in blob mode
     setPattern("blob");
-    const size = 3 + Math.floor(Math.random() * 4);
-    const density = 0.3 + Math.random() * 0.4;
-    const symType = (["horizontal", "vertical", "both"] as const)[Math.floor(Math.random() * 3)];
-    const half = Math.floor(size / 2);
-    const next = new Set<string>();
-    const genW = symType === "horizontal" || symType === "both" ? half + 1 : size;
-    const genH = symType === "vertical" || symType === "both" ? half + 1 : size;
-    for (let x = 0; x < genW; x++) {
-      for (let y = 0; y < genH; y++) {
-        if (Math.random() < density) {
-          const cx = x - half, cy = y - half;
-          next.add(cellKey(cx, cy));
-          if (symType === "horizontal" || symType === "both") next.add(cellKey(-cx, cy));
-          if (symType === "vertical" || symType === "both") next.add(cellKey(cx, -cy));
-          if (symType === "both") next.add(cellKey(-cx, -cy));
-        }
-      }
-    }
-    setActiveCells(next);
+    setActiveCells(new Set([
+      "-8,0", "-7,0", "-6,0", "-5,-2", "-5,0", "-5,2", "-4,-4", "-4,-1", "-4,0", "-4,1", "-4,4",
+      "-3,-4", "-3,-3", "-3,0", "-3,3", "-3,4", "-2,-6", "-2,-5", "-2,-4", "-2,-3", "-2,-2",
+      "-2,2", "-2,3", "-2,4", "-2,5", "-2,6", "-1,-4", "-1,-3", "-1,0", "-1,3", "-1,4",
+      "0,-4", "0,-1", "0,0", "0,1", "0,4", "1,-2", "1,0", "1,2", "2,0", "3,0", "4,0",
+    ]));
     isInitialized.current = true;
     needsFitOnMount.current = true;
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -595,6 +584,7 @@ export default function GridPaint() {
           case "0": fitToContent(); break;
 
           case "t": case "T": setShowTilePreview((p) => !p); break;
+          case "?": setShowShortcuts((p) => !p); break;
           case "r": case "R": generateRandom(); break;
           case "Delete": case "Backspace":
             pushUndo(activeCellsRef.current);
@@ -987,6 +977,16 @@ export default function GridPaint() {
         </button>
       </div>
 
+      <div style={controlToolbarStyle} className={`fixed top-15 right-3 flex-row ${controlToolbar}`}>
+        <Link href="/collection" target="_blank" className={controlBtn} style={{ opacity: 0.85 }} title="Collection">
+          <svg xmlns="http://www.w3.org/2000/svg" className="size-4" width="18" height="18" viewBox="0 0 18 18"><g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" stroke="currentColor"><rect x="2.75" y="7.75" width="12.5" height="7.5" rx="1" ry="1"></rect><line x1="5.75" y1="1.75" x2="12.25" y2="1.75"></line><line x1="4.25" y1="4.75" x2="13.75" y2="4.75"></line></g></svg>
+        </Link>
+        <button onClick={() => setShowShortcuts((p) => !p)} className={controlBtn} style={{ opacity: 0.85 }} title="Shortcuts (?)">
+          <svg className="size-4" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18"><g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" stroke="currentColor"><rect x="6.75" y="6.75" width="4.5" height="4.5"></rect><path d="M4.75,2.75h0c1.104,0,2,.896,2,2v2h-2c-1.104,0-2-.896-2-2h0c0-1.104,.896-2,2-2Z"></path><path d="M13.25,2.75h0c1.104,0,2,.896,2,2v2h-2c-1.104,0-2-.896-2-2h0c0-1.104,.896-2,2-2Z" transform="translate(18 -8.5) rotate(90)"></path><path d="M13.25,11.25h0c1.104,0,2,.896,2,2v2h-2c-1.104,0-2-.896-2-2h0c0-1.104,.896-2,2-2Z" transform="translate(26.5 26.5) rotate(-180)"></path><path d="M4.75,11.25h0c1.104,0,2,.896,2,2v2h-2c-1.104,0-2-.896-2-2h0c0-1.104,.896-2,2-2Z" transform="translate(-8.5 18) rotate(-90)"></path></g></svg>
+        </button>
+      </div>
+
+
       {/* Bottom right: zoom, fit, symmetry, invert, tile, color */}
       <div style={controlToolbarStyle} className={`fixed bottom-3 right-3 flex-row ${controlToolbar}`}>
         <button onClick={() => { triggerAnimatedTransform(); setZoom((prev) => Math.min(ZOOM_MAX, prev * 1.2)); }} className={controlBtn} style={{ opacity: zoom >= ZOOM_MAX ? 0.3 : 0.7 }} title="Zoom in (Cmd+)">
@@ -1066,6 +1066,53 @@ export default function GridPaint() {
         className="hidden"
         onChange={handleImageFile}
       />
+
+      {/* Shortcuts modal */}
+      {showShortcuts && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center" onClick={() => setShowShortcuts(false)}>
+          <div className="absolute inset-0 bg-neutral-800/40" />
+          <div
+            className="relative bg-neutral-700 rounded-3xl p-6 max-w-md w-full backdrop-blur-[100px] cursor-default brightness-125 mx-4 max-h-[80vh] overflow-y-auto text-white text-sm"
+            style={{ overscrollBehavior: 'auto', userSelect: 'text' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold">Keyboard Shortcuts</h2>
+              <button onClick={() => setShowShortcuts(false)} className="opacity-50 hover:opacity-100 cursor-pointer">
+                <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="4" y1="4" x2="14" y2="14" /><line x1="14" y1="4" x2="4" y2="14" /></svg>
+              </button>
+            </div>
+            <div className="space-y-1.5">
+              {[
+                ["1 – 5", "Switch pattern"],
+                ["X", "Toggle paint / erase"],
+                ["H", "Horizontal symmetry"],
+                ["V", "Vertical symmetry"],
+                ["B", "Both symmetry"],
+                ["I", "Invert"],
+                ["T", "Tile preview"],
+                ["R", "Random shape"],
+                ["0", "Fit to content"],
+                ["⌫", "Clear canvas"],
+                ["⌘ Z", "Undo"],
+                ["⌘ ⇧ Z", "Redo"],
+                ["⌘ +", "Zoom in"],
+                ["⌘ −", "Zoom out"],
+                ["⌘ C", "Copy SVG"],
+                ["Alt + drag", "Pan canvas"],
+                ["Scroll", "Pan canvas"],
+                ["Pinch", "Zoom"],
+                ["?", "This dialog"],
+              ].map(([key, desc]) => (
+                <div key={key} className="flex items-center justify-between py-1">
+                  <span className="opacity-60">{desc}</span>
+                  <kbd className="bg-white/10 rounded px-2 py-0.5 text-xs font-mono min-w-[2.5rem] text-center">{key}</kbd>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

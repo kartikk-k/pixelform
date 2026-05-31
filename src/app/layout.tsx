@@ -20,6 +20,28 @@ const stackSansNotch = Stack_Sans_Notch({
 export const metadata: Metadata = {
   title: "Pixelform",
   description: "Pixelform is a tool for creating pixel art and exporting as SVG",
+  metadataBase: new URL("https://pixelform.vercel.app"),
+  openGraph: {
+    title: "Pixelform",
+    description: "A grid-based SVG painting tool for creating abstract shapes, logos, and graphic design elements.",
+    url: "https://pixelform.vercel.app",
+    siteName: "Pixelform",
+    images: [
+      {
+        url: "/preview.png",
+        width: 1470,
+        height: 741,
+        alt: "Pixelform — Grid-based SVG painting tool",
+      },
+    ],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Pixelform",
+    description: "A grid-based SVG painting tool for creating abstract shapes, logos, and graphic design elements.",
+    images: ["/preview.png"],
+  },
 };
 
 export default function RootLayout({

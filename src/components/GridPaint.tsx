@@ -878,7 +878,7 @@ export default function GridPaint() {
   const tileBounds = getBoundsOfCells(activeCells, gridSize);
 
   return (
-    <div ref={containerRef} className="fixed inset-0 cursor-crosshair" style={{ touchAction: "none" }}>
+    <div ref={containerRef} className="fixed playground inset-0 cursor-crosshair" style={{ touchAction: "none" }}>
       <svg
         ref={svgRef}
         width={dimensions.width} height={dimensions.height}

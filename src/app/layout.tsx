@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Stack_Sans_Notch } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,9 +12,14 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const stackSansNotch = Stack_Sans_Notch({
+  variable: "--font-stack-sans-notch",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
-  title: "Grid Paint",
-  description: "Paint on a grid and export as SVG",
+  title: "Pixelform",
+  description: "Pixelform is a tool for creating pixel art and exporting as SVG",
 };
 
 export default function RootLayout({
@@ -25,7 +30,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${stackSansNotch.variable} antialiased`}
     >
       <body>{children}</body>
     </html>

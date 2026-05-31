@@ -940,7 +940,16 @@ export default function GridPaint() {
       {/* Top right: reset, download, copy SVG, share */}
       <div style={controlToolbarStyle} className={`fixed top-3 right-3 flex-row ${controlToolbar}`}>
         <button onClick={generateRandom} className={controlBtn} style={{ opacity: 0.85 }} title="Random (R)">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 18 18" aria-hidden><g fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" stroke="currentColor"><rect x="2.75" y="2.75" width="12.5" height="12.5" rx="2" /><circle cx="6.5" cy="6.5" r=".75" fill="currentColor" stroke="none" /><circle cx="9" cy="9" r=".75" fill="currentColor" stroke="none" /><circle cx="11.5" cy="11.5" r=".75" fill="currentColor" stroke="none" /><circle cx="6.5" cy="11.5" r=".75" fill="currentColor" stroke="none" /><circle cx="11.5" cy="6.5" r=".75" fill="currentColor" stroke="none" /></g></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 18 18" aria-hidden>
+            <g fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" stroke="currentColor">
+              <rect x="2.75" y="2.75" width="12.5" height="12.5" rx="2" ry="2" />
+              <circle cx="12" cy="6" r="1" fill="currentColor" data-stroke="none" stroke="none" />
+              <circle cx="9" cy="9" r="1" fill="currentColor" data-stroke="none" stroke="none" />
+              <circle cx="6" cy="6" r="1" fill="currentColor" data-stroke="none" stroke="none" />
+              <circle cx="12" cy="12" r="1" fill="currentColor" data-stroke="none" stroke="none" />
+              <circle cx="6" cy="12" r="1" fill="currentColor" data-stroke="none" stroke="none" />
+            </g>
+          </svg>
         </button>
         <button onClick={handleReset} className={controlBtn} style={{ opacity: 0.85 }} title="Reset">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 18 18" aria-hidden><g fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" stroke="currentColor"><path d="M6.096,7.032c.488,.791,1.111,1.636,1.904,2.468,1.074,1.125,2.194,1.948,3.204,2.546" /><line x1="16.25" y1="1.5" x2="10.376" y2="7.374" /><path d="M10.376,7.374c3.158,2.77-.077,6.653-2.123,8.288-.51,.408-1.186,.554-1.814,.375-2.745-.781-4.391-3.076-4.689-6.037,1.375-.188,2.192-.997,3.447-2.268,1.56-1.581,3.803-1.566,5.179-.358Z" /></g></svg>
@@ -961,7 +970,13 @@ export default function GridPaint() {
           </svg>
         </button>
         <button onClick={importImage} className={controlBtn} style={{ opacity: 0.85 }} title="Import image">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 18 18" aria-hidden><g fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" stroke="currentColor"><rect x="2.75" y="2.75" width="12.5" height="12.5" rx="2" /><circle cx="6.5" cy="7" r="1.5" /><path d="M5.75,15.25l4.5-4.5c.552-.552,1.448-.552,2,0l3,3" /></g></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 18 18" aria-hidden>
+            <g fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" stroke="currentColor">
+              <path d="M3.762,14.989l6.074-6.075c.781-.781,2.047-.781,2.828,0l2.586,2.586" />
+              <rect x="2.75" y="2.75" width="12.5" height="12.5" rx="2" ry="2" />
+              <circle cx="6.25" cy="7.25" r="1.25" fill="currentColor" data-stroke="none" stroke="none" />
+            </g>
+          </svg>
         </button>
         <button onClick={shareURL} className={controlBtn} style={{ opacity: 0.85 }} title="Share URL (copies link)">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 18 18" aria-hidden>

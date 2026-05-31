@@ -264,6 +264,8 @@ export default function GridPaint() {
   const [pattern, setPattern] = useState<PatternType>("rounded");
   const [symmetry, setSymmetry] = useState<SymmetryMode>("none");
   const [showPatternPicker, setShowPatternPicker] = useState(false);
+  const [patternTransition, setPatternTransition] = useState(false);
+  const [prevPaths, setPrevPaths] = useState("");
   const [showTilePreview, setShowTilePreview] = useState(false);
 
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -755,6 +757,91 @@ export default function GridPaint() {
     });
   }, []);
 
+  // --- Pattern morph transition ---
+  const prevPatternRef = useRef(pattern);
+  useEffect(() => {
+    if (prevPatternRef.current !== pattern && activeCells.size > 0) {
+      // Capture old paths before pattern change renders
+      const oldPaths = generatePaths(activeCells, gridSize, pan.x, pan.y, dimensions.width, dimensions.height, prevPatternRef.current);
+      setPrevPaths(oldPaths.join(""));
+      setPatternTransition(true);
+      const timer = setTimeout(() => {
+        setPatternTransition(false);
+        setPrevPaths("");
+      }, 250);
+      prevPatternRef.current = pattern;
+      return () => clearTimeout(timer);
+    }
+    prevPatternRef.current = pattern;
+  }, [pattern, activeCells, gridSize, pan.x, pan.y, dimensions.width, dimensions.height]);
+
+  // --- Import image as grid cells ---
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const importImage = useCallback(() => { fileInputRef.current?.click(); }, []);
+
+  const handleImageFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        pushUndo(activeCellsRef.current);
+        const gs = gridSizeRef.current;
+        // Determine grid dimensions from image aspect ratio
+        // Target ~20 cells on the longest side
+        const targetCells = 20;
+        const aspect = img.width / img.height;
+        let cols: number, rows: number;
+        if (aspect >= 1) { cols = targetCells; rows = Math.round(targetCells / aspect); }
+        else { rows = targetCells; cols = Math.round(targetCells * aspect); }
+
+        // Draw image to offscreen canvas at grid resolution
+        const canvas = document.createElement("canvas");
+        canvas.width = cols;
+        canvas.height = rows;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0, cols, rows);
+        const imageData = ctx.getImageData(0, 0, cols, rows);
+
+        const next = new Set<string>();
+        const halfCols = Math.floor(cols / 2);
+        const halfRows = Math.floor(rows / 2);
+        for (let y = 0; y < rows; y++) {
+          for (let x = 0; x < cols; x++) {
+            const i = (y * cols + x) * 4;
+            const r = imageData.data[i], g = imageData.data[i + 1], b = imageData.data[i + 2], a = imageData.data[i + 3];
+            // Calculate brightness (0-255), threshold at 128
+            const brightness = (r * 0.299 + g * 0.587 + b * 0.114) * (a / 255);
+            if (brightness < 128) {
+              next.add(cellKey(x - halfCols, y - halfRows));
+            }
+          }
+        }
+        setActiveCells(next);
+        // Center and fit
+        setPan({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+        requestAnimationFrame(() => {
+          const bounds = getBoundsOfCells(next, gs);
+          if (!bounds) return;
+          const padding = gs * 2;
+          const bw = bounds.width + padding * 2, bh = bounds.height + padding * 2;
+          const scaleX = window.innerWidth / bw, scaleY = window.innerHeight / bh;
+          const newZoom = Math.min(scaleX, scaleY, ZOOM_MAX);
+          const cx = bounds.x + bounds.width / 2, cy = bounds.y + bounds.height / 2;
+          triggerAnimatedTransform();
+          setZoom(newZoom);
+          setPan({ x: window.innerWidth / 2 - cx * newZoom, y: window.innerHeight / 2 - cy * newZoom });
+        });
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+    // Reset input so same file can be re-imported
+    e.target.value = "";
+  }, [pushUndo, triggerAnimatedTransform]);
+
   // --- Generate paths ---
   const paths = generatePaths(activeCells, gridSize, pan.x, pan.y, dimensions.width, dimensions.height, pattern);
 
@@ -831,7 +918,11 @@ export default function GridPaint() {
           transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}
           style={animateTransform ? { transition: "transform 150ms ease-out" } : undefined}
         >
-          <path d={tileRepeatPaths} fill="black" stroke="black" strokeWidth={1 / zoom} />
+          {/* Crossfade: old pattern fading out */}
+          {patternTransition && prevPaths && (
+            <path d={prevPaths} fill="black" stroke="black" strokeWidth={1 / zoom} style={{ opacity: 0, transition: "opacity 250ms ease-out" }} />
+          )}
+          <path d={tileRepeatPaths} fill="black" stroke="black" strokeWidth={1 / zoom} style={patternTransition ? { opacity: 1, transition: "opacity 200ms ease-in 50ms" } : undefined} />
         </g>
       </svg>
 
@@ -868,6 +959,9 @@ export default function GridPaint() {
               <line x1="10.25" y1="12.75" x2="13.25" y2="12.75" />
             </g>
           </svg>
+        </button>
+        <button onClick={importImage} className={controlBtn} style={{ opacity: 0.85 }} title="Import image">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 18 18" aria-hidden><g fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" stroke="currentColor"><rect x="2.75" y="2.75" width="12.5" height="12.5" rx="2" /><circle cx="6.5" cy="7" r="1.5" /><path d="M5.75,15.25l4.5-4.5c.552-.552,1.448-.552,2,0l3,3" /></g></svg>
         </button>
         <button onClick={shareURL} className={controlBtn} style={{ opacity: 0.85 }} title="Share URL (copies link)">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 18 18" aria-hidden>
@@ -949,6 +1043,15 @@ export default function GridPaint() {
           ))}
         </div>
       )}
+
+      {/* Hidden file input for image import */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleImageFile}
+      />
     </div>
   );
 }

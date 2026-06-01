@@ -3,6 +3,7 @@ import { generatePathsRounded } from "./rounded";
 import { generatePathsSquare } from "./square";
 import { generatePathsBlob } from "./blob";
 import { generatePathsLeaf } from "./leaf";
+import { generatePathsSquircle } from "./squircle";
 import { generateChamferPaths } from "./chamfer";
 import { generateIsoPaths } from "./isometric";
 import { isoToScreen } from "../grids/iso-grid";
@@ -19,8 +20,9 @@ export const PATTERNS: PatternDef[] = [
   { id: "square", label: "Square", gridType: "square", shortcutKey: "2" },
   { id: "blob", label: "Blob", gridType: "square", shortcutKey: "3" },
   { id: "leaf", label: "Leaf", gridType: "square", shortcutKey: "4" },
-  { id: "chamfer", label: "Chamfer", gridType: "square", shortcutKey: "5" },
-  { id: "isometric", label: "Isometric", gridType: "isometric", shortcutKey: "6" },
+  { id: "squircle", label: "Squircle", gridType: "square", shortcutKey: "5" },
+  { id: "chamfer", label: "Chamfer", gridType: "square", shortcutKey: "6" },
+  { id: "isometric", label: "Isometric", gridType: "isometric", shortcutKey: "7" },
 ];
 
 export function getPatternDef(pattern: PatternType): PatternDef {
@@ -71,6 +73,7 @@ export function generateAllPaths(
         case "square": generatePathsSquare(centerX, centerY, half, on, paths); break;
         case "blob": generatePathsBlob(centerX, centerY, half, on, n, paths); break;
         case "leaf": generatePathsLeaf(centerX, centerY, half, on, n, paths); break;
+        case "squircle": generatePathsSquircle(centerX, centerY, half, on, n, paths); break;
       }
     }
   }

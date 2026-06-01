@@ -47,8 +47,9 @@ export function useKeyboardShortcuts({
           case "2": setPattern("square"); break;
           case "3": setPattern("blob"); break;
           case "4": setPattern("leaf"); break;
-          case "5": setPattern("chamfer"); break;
-          case "6": setPattern("isometric"); break;
+          case "5": setPattern("squircle"); break;
+          case "6": setPattern("chamfer"); break;
+          case "7": setPattern("isometric"); break;
           case "x": case "X": setBrushColor((p) => p === "black" ? "white" : "black"); break;
           case "i": case "I": invertCells(); break;
           case "h": case "H": setSymmetry((s) => s === "horizontal" ? "none" : "horizontal"); break;

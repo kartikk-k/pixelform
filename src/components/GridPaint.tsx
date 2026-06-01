@@ -442,7 +442,7 @@ export default function GridPaint() {
 
       {/* Bottom left: pattern picker */}
       <div style={controlToolbarStyle} className={`fixed bottom-3 left-3 flex-col ${controlToolbar}`}>
-        <Tooltip label="Pattern" shortcut="1-6" side="top" align="start"><button onClick={() => setShowPatternPicker((p) => !p)} className={`${controlBtn} ${showPatternPicker ? "bg-white/15" : ""}`} style={{ opacity: 0.85 }}>
+        <Tooltip label="Pattern" shortcut="1-7" side="top" align="start"><button onClick={() => setShowPatternPicker((p) => !p)} className={`${controlBtn} ${showPatternPicker ? "bg-white/15" : ""}`} style={{ opacity: 0.85 }}>
           <PatternIcon pattern={pattern} size={18} />
         </button></Tooltip>
       </div>

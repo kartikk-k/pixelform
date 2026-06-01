@@ -15,7 +15,7 @@ export function ShortcutsModal({ onClose }: { onClose: () => void }) {
         </div>
         <div className="space-y-1.5">
           {[
-            ["1 – 6", "Switch pattern"],
+            ["1 – 7", "Switch pattern"],
             ["X", "Toggle paint / erase"],
             ["H", "Horizontal symmetry"],
             ["V", "Vertical symmetry"],

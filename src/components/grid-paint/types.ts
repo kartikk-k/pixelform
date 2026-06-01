@@ -7,7 +7,7 @@ export const ZOOM_MAX = 5;
 export const MAX_UNDO = 100;
 
 export type Cell = { x: number; y: number };
-export type PatternType = "rounded" | "square" | "blob" | "leaf" | "chamfer" | "isometric";
+export type PatternType = "rounded" | "square" | "blob" | "leaf" | "chamfer" | "isometric" | "squircle";
 export type SymmetryMode = "none" | "horizontal" | "vertical" | "both";
 export type GridType = "square" | "isometric";
 

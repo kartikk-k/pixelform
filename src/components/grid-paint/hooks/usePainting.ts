@@ -20,6 +20,8 @@ export function usePainting(
   const lastPanPos = useRef({ x: 0, y: 0 });
   const paintedThisStroke = useRef<Set<string>>(new Set());
   const lastPaintPos = useRef<{ x: number; y: number } | null>(null);
+  const strokeOrigin = useRef<{ x: number; y: number } | null>(null);
+  const strokeSnapshot = useRef<Set<string> | null>(null);
 
   const screenToGrid = useCallback((screenX: number, screenY: number): Cell => {
     const worldX = (screenX - panRef.current.x) / zoomRef.current;
@@ -76,7 +78,9 @@ export function usePainting(
     isPaintingRef.current = true;
     paintedThisStroke.current = new Set();
     lastPaintPos.current = { x: e.clientX, y: e.clientY };
+    strokeOrigin.current = { x: e.clientX, y: e.clientY };
     pushUndo(activeCellsRef.current);
+    strokeSnapshot.current = new Set(activeCellsRef.current);
     paintCell(e.clientX, e.clientY);
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
   }, [paintCell, pushUndo, activeCellsRef, isPaintingRef]);
@@ -89,15 +93,45 @@ export function usePainting(
       return;
     }
     if (!isPaintingRef.current) return;
+
+    let targetX = e.clientX, targetY = e.clientY;
+
+    // Shift constrains to straight line from stroke origin
+    if (e.shiftKey && strokeOrigin.current) {
+      const dx = e.clientX - strokeOrigin.current.x;
+      const dy = e.clientY - strokeOrigin.current.y;
+      const absDx = Math.abs(dx), absDy = Math.abs(dy);
+      if (absDx > absDy * 2) {
+        // Horizontal
+        targetY = strokeOrigin.current.y;
+      } else if (absDy > absDx * 2) {
+        // Vertical
+        targetX = strokeOrigin.current.x;
+      } else {
+        // Diagonal (45 degrees)
+        const dist = Math.max(absDx, absDy);
+        targetX = strokeOrigin.current.x + dist * Math.sign(dx);
+        targetY = strokeOrigin.current.y + dist * Math.sign(dy);
+      }
+      // Restore to stroke start state, then repaint the constrained line
+      if (strokeSnapshot.current) setActiveCells(new Set(strokeSnapshot.current));
+      paintedThisStroke.current = new Set();
+      paintLine(strokeOrigin.current.x, strokeOrigin.current.y, targetX, targetY);
+      lastPaintPos.current = { x: targetX, y: targetY };
+      return;
+    }
+
     const prev = lastPaintPos.current;
-    if (prev) paintLine(prev.x, prev.y, e.clientX, e.clientY);
-    lastPaintPos.current = { x: e.clientX, y: e.clientY };
+    if (prev) paintLine(prev.x, prev.y, targetX, targetY);
+    lastPaintPos.current = { x: targetX, y: targetY };
   }, [paintLine, setPan, isPaintingRef]);
 
   const handlePointerUp = useCallback(() => {
     isPaintingRef.current = false;
     isPanning.current = false;
     lastPaintPos.current = null;
+    strokeOrigin.current = null;
+    strokeSnapshot.current = null;
   }, [isPaintingRef]);
 
   return { handlePointerDown, handlePointerMove, handlePointerUp };

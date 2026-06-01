@@ -30,6 +30,7 @@ export function ShortcutsModal({ onClose }: { onClose: () => void }) {
             ["⌘ +", "Zoom in"],
             ["⌘ −", "Zoom out"],
             ["⌘ C", "Copy SVG"],
+            ["Shift + drag", "Straight line"],
             ["Alt + drag", "Pan canvas"],
             ["Scroll", "Pan canvas"],
             ["Pinch", "Zoom"],
